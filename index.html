@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Ventas y Proyecciones</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Sistema de Control y Proyecciones</h1>
+        <p>Modelo de inversión cíclica semanal con cobro desfasado en dos pagos</p>
+    </header>
+
+    <div class="grid">
+        <!-- Columna Izquierda: Entradas de datos -->
+        <div class="sidebar-grid" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="card">
+                <h2>Registrar Nueva Venta</h2>
+                <div class="form-group">
+                    <label for="prodName">Nombre del Producto</label>
+                    <input type="text" id="prodName" placeholder="Ej. Camisas Lote A">
+                </div>
+                <div class="form-group">
+                    <label for="prodCost">Costo de Inversión ($)</label>
+                    <input type="number" id="prodCost" value="450">
+                </div>
+                <div class="form-group">
+                    <label for="prodPrice">Precio de Venta Total ($)</label>
+                    <input type="number" id="prodPrice" value="900">
+                </div>
+                <div class="form-group">
+                    <label for="prodPago1">Primer Abono Recibido ($)</label>
+                    <input type="number" id="prodPago1" value="450">
+                </div>
+                <button class="btn-primary" onclick="agregarVenta()">Guardar Venta</button>
+            </div>
+
+            <div class="card">
+                <h2>Simulador de Proyecciones</h2>
+                <p style="font-size: 0.85rem; margin-bottom: 15px; color:#666;">Configura el modelo meta a 10 semanas (Ahorro fijo de $1,000/sem para comprar 2 productos).</p>
+                <div class="form-group">
+                    <label for="simCost">Costo Producto Simulado ($)</label>
+                    <input type="number" id="simCost" value="350">
+                </div>
+                <div class="form-group">
+                    <label for="simPrice">Precio Venta Simulado ($)</label>
+                    <input type="number" id="simPrice" value="600">
+                </div>
+                <button class="btn-secondary" onclick="generarProyeccion()">Simular 10 Semanas</button>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Tablas y Reportes -->
+        <div class="main-content" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="card">
+                <h2>Registro Histórico de Ventas Reales</h2>
+                <p style="font-size: 0.85rem; margin-bottom: 10px; color: #666;">💡 Puedes hacer doble clic en los montos de Pago 1 y Pago 2 para modificarlos directamente.</p>
+                <div class="table-container">
+                    <table id="ventasTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Producto</th>
+                                <th>Costo</th>
+                                <th>Precio</th>
+                                <th>Pago 1</th>
+                                <th>Pago 2</th>
+                                <th>Total Recibido</th>
+                                <th>Saldo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Contenido dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" id="proyeccionesCard" style="display:none;">
+                <h2>Análisis de Flujo de Caja Proyectado (10 Semanas)</h2>
+                <div class="table-container">
+                    <table id="proyTable">
+                        <thead>
+                            <tr>
+                                <th>Semana</th>
+                                <th>Caja Inicial</th>
+                                <th>Ahorro (+)</th>
+                                <th>Inversión (-)</th>
+                                <th>Abono 1 (+)</th>
+                                <th>Abono 2 (+)</th>
+                                <th>Ganancia Acum.</th>
+                                <th>Caja Final</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Contenido dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="chart-wrapper">
+                    <svg id="svgChart" viewBox="0 0 500 300" preserveAspectRatio="none">
+                        <!-- Las líneas se inyectan con JS -->
+                    </svg>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background-color: #27ae60;"></div> Caja Final Real</div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #e67e22;"></div> Ganancia Acumulada</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
