@@ -1,5 +1,5 @@
 // --- CONFIGURACIÓN DE CREDENCIALES DE SUPABASE ---
-const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co";
 const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
 
 let supabaseClient = null;
