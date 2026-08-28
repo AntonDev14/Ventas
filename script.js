@@ -1,7 +1,8 @@
 // --- CONFIGURACIÓN DE CREDENCIALES DE SUPABASE ---
-const SUPABASE_URL = "CONECTA_AQUÍ_TU_PROJECT_URL";
-const SUPABASE_KEY = "CONECTA_AQUÍ_TU_ANON_PUBLIC_KEY";
+const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co/rest/v1/";
+const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
 
+// Se inicializa el cliente al inicio absoluto para que agregarVenta() siempre lo encuentre listo
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let ventas = [];
@@ -263,4 +264,5 @@ function dibujarGraficoSVG(cajaData, gananciaData) {
     console.log("🎨 [PROYECCIÓN] Gráfico renderizado perfectamente.");
 }
 
+// Iniciar aplicación al cargar todo el script
 iniciarApp();
