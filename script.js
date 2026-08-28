@@ -2,35 +2,41 @@
 const SUPABASE_URL = "CONECTA_AQUÍ_TU_PROJECT_URL";
 const SUPABASE_KEY = "CONECTA_AQUÍ_TU_ANON_PUBLIC_KEY";
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let ventas = [];
 
 // --- INICIALIZACIÓN Y ESCUCHA EN TIEMPO REAL ---
 async function iniciarApp() {
+    console.log("🚀 [INICIO] Arrancando aplicación de ventas cloud...");
     await obtenerVentasIniciales();
     
-    // Conexión en tiempo real: cualquier cambio en la base de datos actualiza las pantallas abiertas
-    supabase
+    console.log("📡 [REALTIME] Conectando canal de escucha en tiempo real...");
+    supabaseClient
         .channel('schema-db-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, payload => {
+            console.log(`⚡ [REALTIME DETECTADO] Cambio en DB (${payload.eventType}). Datos:`, payload.new || payload.old);
             obtenerVentasIniciales();
         })
-        .subscribe();
+        .subscribe((status) => {
+            console.log(`🔌 [REALTIME STATUS] Estado del canal: ${status}`);
+        });
 }
 
 // --- LEER DATOS DESDE LA NUBE ---
 async function obtenerVentasIniciales() {
-    const { data, error } = await supabase
+    console.log("📥 [DESCARGA] Solicitando lista de ventas a Supabase...");
+    const { data, error } = await supabaseClient
         .from('ventas')
         .select('*')
         .order('id', { ascending: true });
 
     if (!error) {
         ventas = data;
+        console.log(`✅ [DESCARGA] Éxito. Registros recuperados: ${ventas.length}`, ventas);
         renderVentas();
     } else {
-        console.error("Error al descargar de Supabase:", error);
+        console.error("❌ [DESCARGA ERROR] Problema al descargar de Supabase:", error);
     }
 }
 
@@ -41,7 +47,10 @@ async function agregarVenta() {
     const price = parseFloat(document.getElementById('prodPrice').value);
     const pago1 = parseFloat(document.getElementById('prodPago1').value);
 
+    console.log(`✍️ [NUEVA VENTA] Capturando: Producto="${name}", Costo=$${cost}, Precio=$${price}, Pago1=$${pago1}`);
+
     if (!name || isNaN(cost) || isNaN(price) || isNaN(pago1)) {
+        console.warn("⚠️ [NUEVA VENTA] Validación fallida. Campos vacíos o incorrectos.");
         alert("Por favor rellena todos los campos correctamente.");
         return;
     }
@@ -58,18 +67,26 @@ async function agregarVenta() {
         status: saldo <= 0 ? 'Pagado' : 'Pendiente'
     };
 
-    const { error } = await supabase.from('ventas').insert([nuevaVenta]);
+    console.log("📤 [SUBIDA] Enviando nueva venta a Supabase...", nuevaVenta);
+    const { error } = await supabaseClient.from('ventas').insert([nuevaVenta]);
+    
     if (error) {
-        alert("Error al subir la venta a la nube.");
+        console.error("❌ [SUBIDA ERROR] Supabase rechazó la inserción:", error);
+        alert("Error al subir la venta a la nube. Revisa las políticas RLS.");
     } else {
+        console.log("🎉 [SUBIDA] Registro creado exitosamente en la nube.");
         document.getElementById('prodName').value = '';
     }
 }
-
 // --- MODIFICAR VALORES DIRECTAMENTE EN LA BASE DE DATOS ---
 async function modificarPago(id, campo, nuevoValor) {
+    console.log(`✏️ [EDICIÓN] Modificando Venta ID #${id}. Pago ${campo} -> $${nuevoValor}`);
+    
     const venta = ventas.find(v => v.id === id);
-    if (!venta) return;
+    if (!venta) {
+        console.error(`❌ [EDICIÓN ERROR] No se encontró la venta local con ID #${id}`);
+        return;
+    }
 
     const valorNumerico = parseFloat(nuevoValor) || 0;
     let pago1Actualizado = venta.pago1;
@@ -82,30 +99,45 @@ async function modificarPago(id, campo, nuevoValor) {
     const saldo = venta.price - totalRecibido;
     const status = saldo <= 0 ? 'Pagado' : 'Pendiente';
 
-    const { error } = await supabase
+    const datosActualizados = { 
+        pago1: pago1Actualizado, 
+        pago2: pago2Actualizado,
+        total_recibido: totalRecibido,
+        saldo: saldo,
+        status: status
+    };
+
+    console.log(`📤 [ACTUALIZACIÓN CLOUD] Modificando ID #${id} en Supabase:`, datosActualizados);
+
+    const { error } = await supabaseClient
         .from('ventas')
-        .update({ 
-            pago1: pago1Actualizado, 
-            pago2: pago2Actualizado,
-            total_recibido: totalRecibido,
-            saldo: saldo,
-            status: status
-        })
+        .update(datosActualizados)
         .eq('id', id);
 
-    if (error) console.error("Error al actualizar abono:", error);
+    if (error) {
+        console.error(`❌ [ACTUALIZACIÓN ERROR] Falló la edición del ID #${id}:`, error);
+    } else {
+        console.log(`✅ [ACTUALIZACIÓN] Celda guardada en la nube para ID #${id}.`);
+    }
 }
 
 // --- ELIMINAR VENTA CLOUD ---
 async function eliminarVenta(id) {
-    if (confirm("¿Estás seguro de que deseas eliminar este registro de la nube permanentemente?")) {
-        const { error } = await supabase.from('ventas').delete().eq('id', id);
-        if (error) alert("Error al eliminar el registro.");
+    console.log(`🗑️ [SOLICITUD ELIMINACIÓN] Procesando ID #${id}`);
+    if (confirm("¿Estás seguro de que deseas eliminar este registro permanentemente?")) {
+        const { error } = await supabaseClient.from('ventas').delete().eq('id', id);
+        if (error) {
+            console.error(`❌ [BORRADO ERROR] Supabase rechazó la eliminación de ID #${id}:`, error);
+            alert("Error al eliminar el registro.");
+        } else {
+            console.log(`✅ [BORRADO] ID #${id} eliminado con éxito de la nube.`);
+        }
     }
 }
 
 // --- RENDERIZAR TABLA DE VENTAS ---
 function renderVentas() {
+    console.log("🎨 [UI RENDER] Dibujando la interfaz con los nuevos datos...");
     const tbody = document.querySelector('#ventasTable tbody');
     tbody.innerHTML = '';
 
@@ -144,10 +176,12 @@ function renderVentas() {
 
 // --- PROYECCIÓN A 10 SEMANAS ---
 function generarProyeccion() {
+    console.log("📊 [PROYECCIÓN] Iniciando simulación matemática...");
     const simCosto = parseFloat(document.getElementById('simCost').value);
     const simPrecio = parseFloat(document.getElementById('simPrice').value);
 
     if (isNaN(simCosto) || isNaN(simPrecio)) {
+        console.warn("⚠️ [PROYECCIÓN] Parámetros numéricos inválidos.");
         alert("Introduce valores válidos para la simulación.");
         return;
     }
@@ -171,6 +205,7 @@ function generarProyeccion() {
         let cajaDisponible = cajaInicial + ahorroSemanal;
 
         if (cajaDisponible < inv2Prod) {
+            console.warn(`🛑 [PROYECCIÓN PAUSADA] Quiebre de caja detectado en la Semana ${i}.`);
             alert(`Falta de liquidez en la semana ${i}. La simulación se pausó.`);
             break;
         }
@@ -225,6 +260,7 @@ function dibujarGraficoSVG(cajaData, gananciaData) {
         <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#ccc" stroke-width="1" />
     `;
     svg.innerHTML = ejes + lineCaja + lineGanancia + nodos;
+    console.log("🎨 [PROYECCIÓN] Gráfico renderizado perfectamente.");
 }
 
 iniciarApp();
