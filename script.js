@@ -1,6 +1,6 @@
 // --- CONFIGURACIÓN DE CREDENCIALES DE SUPABASE ---
-const SUPABASE_URL = "https://supabase.co";
-const SUPABASE_KEY = "TU_PUBLISHABLE_KEY_AQUÍ"; // Asegúrate de mantener tu clave real aquí
+const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co";
+const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB"; // Asegúrate de mantener tu clave real aquí
 
 let supabaseClient = null;
 let ventas = [];
@@ -20,12 +20,11 @@ function iniciarApp() {
         console.log("🔒 [CONEXIÓN] Cliente de Supabase creado con éxito.");
         
         // Primera descarga de datos inmediata al abrir la página
-        obtenerVentasIniciales();
+        obtenerVentasIniciales(true); // Pasamos true para forzar el primer render
         
         // SINCRONIZACIÓN TOTAL EN TIEMPO REAL (Consulta automática cada 3 segundos)
-        // Esto permite que veas los datos en tu celular y computadora sin refrescar
         console.log("📡 [SINCRO CLOUD] Activando actualización automática cada 3 segundos...");
-        setInterval(obtenerVentasIniciales, 3000);
+        setInterval(() => obtenerVentasIniciales(false), 3000);
 
     } catch (error) {
         console.error("Fallo crítico al inicializar el cliente de Supabase:", error);
@@ -33,7 +32,7 @@ function iniciarApp() {
 }
 
 // --- LEER Y VISUALIZAR DATOS DESDE LA NUBE ---
-async function obtenerVentasIniciales() {
+async function obtenerVentasIniciales(forzarRender = false) {
     if (!supabaseClient) return;
 
     const { data, error } = await supabaseClient
@@ -42,8 +41,8 @@ async function obtenerVentasIniciales() {
         .order('id', { ascending: true });
 
     if (!error) {
-        // Solo renderizamos si el número de registros o datos cambiaron para evitar parpadeos
-        if (JSON.stringify(ventas) !== JSON.stringify(data)) {
+        // Si forzarRender es true, o si los datos reales cambiaron, actualizamos la pantalla
+        if (forzarRender || JSON.stringify(ventas) !== JSON.stringify(data)) {
             console.log(`📥 [SINCRO] Datos actualizados desde la nube. Registros: ${data.length}`);
             ventas = data;
             renderVentas();
@@ -91,7 +90,7 @@ async function agregarVenta() {
     } else {
         console.log("🎉 [SUBIDA] Registro creado exitosamente.");
         document.getElementById('prodName').value = '';
-        obtenerVentasIniciales(); // Forzar recarga visual inmediata
+        obtenerVentasIniciales(true); // Forzar recarga visual inmediata
     }
 }
 // --- MODIFICAR VALORES DIRECTAMENTE EN LA BASE DE DATOS ---
@@ -120,7 +119,6 @@ async function modificarPago(id, campo, nuevoValor) {
         status: status
     };
 
-    // Actualización directa en la nube usando el ID único de la fila
     const { error } = await supabaseClient
         .from('ventas')
         .update(datosActualizados)
@@ -130,7 +128,7 @@ async function modificarPago(id, campo, nuevoValor) {
         console.error(`❌ [ACTUALIZACIÓN ERROR] Falló la edición del ID #${id}:`, error);
     } else {
         console.log(`✅ [ACTUALIZACIÓN] Guardado en la nube para ID #${id}.`);
-        obtenerVentasIniciales(); // Sincronizar cambios
+        obtenerVentasIniciales(true); // Forzar actualización visual inmediata
     }
 }
 
@@ -149,7 +147,7 @@ async function eliminarVenta(id) {
             alert("Error al eliminar el registro.");
         } else {
             console.log(`✅ [BORRADO] ID #${id} eliminado con éxito.`);
-            obtenerVentasIniciales(); // Actualizar interfaz
+            obtenerVentasIniciales(true); // Forzar vaciado y redibujado inmediato de la pantalla
         }
     }
 }
