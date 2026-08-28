@@ -2,57 +2,51 @@
 const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co/rest/v1/";
 const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
 
-let supabaseClient;
+let supabaseClient = null;
 let ventas = [];
 
-// --- VALIDACIÓN DE CONEXIÓN INICIAL ---
-function inicializarAplicacion() {
-    if (typeof supabase !== 'undefined') {
-        // Solo si la librería ya cargó con éxito, creamos el cliente
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log("🔒 [CONEXIÓN] Cliente de Supabase inicializado correctamente.");
-        iniciarApp();
-    } else {
-        console.error("⚠️ [REINTENTO] La librería remota no ha bajado aún. Reintentando en 1 segundo...");
-        setTimeout(inicializarAplicacion, 1000);
-    }
-}
-// --- INICIALIZACIÓN CONSTRUCTORA ---
-function inicializarCliente() {
-    try {
-        // Validación en caliente para verificar si la librería ya está en memoria
-        if (typeof supabase !== 'undefined') {
-            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log("🔒 [CONEXIÓN] Cliente de Supabase construido correctamente.");
-            iniciarApp();
-        } else {
-            console.error("❌ [ERROR CRÍTICO] La librería remota 'supabase' sigue sin responder. Intentando reconexión en 2 segundos...");
-            setTimeout(inicializarCliente, 2000); // Reintento automático en redes lentas
-        }
-    } catch(e) {
-        console.error("Fallo estructural en constructor:", e);
-    }
-}
-
-// --- INICIALIZACIÓN Y ESCUCHA EN TIEMPO REAL ---
-async function iniciarApp() {
-    console.log("🚀 [INICIO] Arrancando aplicación de ventas cloud...");
-    await obtenerVentasIniciales();
+// --- UNICA FUNCIÓN DE ARRANQUE SEGURO ---
+function iniciarApp() {
+    console.log("🚀 [INICIO] Intentando arrancar aplicación de ventas cloud...");
     
-    console.log("📡 [REALTIME] Conectando canal de escucha en tiempo real...");
-    supabaseClient
-        .channel('schema-db-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, payload => {
-            console.log(`⚡ [REALTIME DETECTADO] Cambio en DB (${payload.eventType}). Datos:`, payload.new || payload.old);
-            obtenerVentasIniciales();
-        })
-        .subscribe((status) => {
-            console.log(`🔌 [REALTIME STATUS] Estado del canal: ${status}`);
-        });
+    // Validamos si la librería externa ya existe en el navegador
+    if (typeof supabase === 'undefined') {
+        console.error("❌ [ERROR] La librería 'supabase' no ha cargado en el HTML. Reintentando en 1 segundo...");
+        setTimeout(iniciarApp, 1000);
+        return;
+    }
+
+    try {
+        // CREAMOS EL CLIENTE AQUÍ MISMO
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("🔒 [CONEXIÓN] Cliente de Supabase creado con éxito:", supabaseClient);
+        
+        // Una vez creado con éxito, mandamos a llamar las ventas
+        obtenerVentasIniciales();
+        
+        console.log("📡 [REALTIME] Conectando canal de escucha en tiempo real...");
+        supabaseClient
+            .channel('schema-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, payload => {
+                console.log(`⚡ [REALTIME DETECTADO] Cambio en DB (${payload.eventType}).`);
+                obtenerVentasIniciales();
+            })
+            .subscribe((status) => {
+                console.log(`🔌 [REALTIME STATUS] Estado del canal: ${status}`);
+            });
+
+    } catch (error) {
+        console.error("Fallo crítico al inicializar el cliente de Supabase:", error);
+    }
 }
 
 // --- LEER DATOS DESDE LA NUBE ---
 async function obtenerVentasIniciales() {
+    if (!supabaseClient) {
+        console.error("❌ [DESCARGA ABORTADA] supabaseClient no está inicializado.");
+        return;
+    }
+
     console.log("📥 [DESCARGA] Solicitando lista de ventas a Supabase...");
     const { data, error } = await supabaseClient
         .from('ventas')
@@ -80,6 +74,11 @@ async function agregarVenta() {
     if (!name || isNaN(cost) || isNaN(price) || isNaN(pago1)) {
         console.warn("⚠️ [NUEVA VENTA] Validación fallida. Campos vacíos o incorrectos.");
         alert("Por favor rellena todos los campos correctamente.");
+        return;
+    }
+
+    if (!supabaseClient) {
+        alert("La base de datos aún no está lista. Intenta de nuevo en 2 segundos.");
         return;
     }
 
@@ -291,5 +290,6 @@ function dibujarGraficoSVG(cajaData, gananciaData) {
     console.log("🎨 [PROYECCIÓN] Gráfico renderizado perfectamente.");
 }
 
-// Iniciar aplicación al cargar todo el script
+// UNICO DISPARADOR: SE ASEGURA DE QUE ESTA SEA LA ULTIMA LÍNEA DE TODO EL ARCHIVO JS
 iniciarApp();
+
