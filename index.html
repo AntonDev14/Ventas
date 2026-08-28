@@ -6,8 +6,8 @@
     <title>Control de Ventas Cloud</title>
     <link rel="stylesheet" href="styles.css">
     
-    <!-- LIBRERÍA OFICIAL DE SUPABASE DESDE UN CDN ULTRA ESTABLE -->
-    <script src="https://cloudflare.com" crossorigin="anonymous"></script>
+    <!-- LEER LA LIBRERÍA DE FORMA LOCAL (EVITA BLOQUEOS DE RED) -->
+    <script src="supabase.js"></script>
 </head>
 <body>
 
@@ -48,7 +48,7 @@
                     <label for="simCost">Costo Producto Simulado ($)</label>
                     <input type="number" id="simCost" value="350">
                 </div>
-                <div class="form-group">
+                <div class="form-group =">
                     <label for="simPrice">Precio Venta Simulado ($)</label>
                     <input type="number" id="simPrice" value="600">
                 </div>
