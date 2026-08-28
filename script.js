@@ -2,10 +2,25 @@
 const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co/rest/v1/";
 const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
 
-// Se inicializa el cliente al inicio absoluto para que agregarVenta() siempre lo encuentre listo
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+let supabaseClient;
 let ventas = [];
+
+// --- INICIALIZACIÓN CONSTRUCTORA ---
+function inicializarCliente() {
+    try {
+        // Validación en caliente para verificar si la librería ya está en memoria
+        if (typeof supabase !== 'undefined') {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log("🔒 [CONEXIÓN] Cliente de Supabase construido correctamente.");
+            iniciarApp();
+        } else {
+            console.error("❌ [ERROR CRÍTICO] La librería remota 'supabase' sigue sin responder. Intentando reconexión en 2 segundos...");
+            setTimeout(inicializarCliente, 2000); // Reintento automático en redes lentas
+        }
+    } catch(e) {
+        console.error("Fallo estructural en constructor:", e);
+    }
+}
 
 // --- INICIALIZACIÓN Y ESCUCHA EN TIEMPO REAL ---
 async function iniciarApp() {
