@@ -1,6 +1,6 @@
 // --- CONFIGURACIÓN DE CREDENCIALES DE SUPABASE ---
-const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co/rest/v1/";
-const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
+const SUPABASE_URL = "CONECTA_AQUÍ_TU_PROJECT_URL";
+const SUPABASE_KEY = "CONECTA_AQUÍ_TU_ANON_PUBLIC_KEY";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
