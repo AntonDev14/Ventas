@@ -113,7 +113,6 @@ button:active {
     background-color: var(--primary);
     color: white;
 }
-
 .btn-primary:hover { background-color: #21543f; }
 
 .btn-secondary {
@@ -121,7 +120,6 @@ button:active {
     color: white;
     margin-top: 10px;
 }
-
 .btn-secondary:hover { background-color: #17526d; }
 
 .table-container {
@@ -159,7 +157,6 @@ tr:nth-child(even) { background-color: var(--light); }
     font-size: 0.75rem;
     font-weight: bold;
 }
-
 .status.pagado { background-color: #d4edda; color: var(--success); }
 .status.pendiente { background-color: #fff3cd; color: var(--warning); }
 
@@ -182,7 +179,6 @@ svg {
     margin-top: 10px;
     font-size: 0.85rem;
 }
-
 .legend-item { display: flex; align-items: center; gap: 5px; }
 .legend-color { width: 12px; height: 12px; border-radius: 3px; }
 .action-btn { padding: 4px 8px; font-size: 0.8rem; width: auto; }

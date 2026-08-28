@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Ventas y Proyecciones</title>
+    <title>Control de Ventas Cloud</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Librería oficial de Supabase para navegadores -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>Sistema de Control y Proyecciones</h1>
-        <p>Modelo de inversión cíclica semanal con cobro desfasado en dos pagos</p>
+        <h1>Control de Ventas en la Nube (Tiempo Real)</h1>
+        <p>Sincronizado de forma inmediata en todos tus dispositivos móviles y de escritorio</p>
     </header>
 
     <div class="grid">
-        <!-- Columna Izquierda: Entradas de datos -->
+        <!-- Columna Izquierda: Formularios -->
         <div class="sidebar-grid" style="display: flex; flex-direction: column; gap: 20px;">
             <div class="card">
                 <h2>Registrar Nueva Venta</h2>
@@ -25,22 +27,22 @@
                 </div>
                 <div class="form-group">
                     <label for="prodCost">Costo de Inversión ($)</label>
-                    <input type="number" id="prodCost" value="450">
+                    <input type="number" id="prodCost" value="350">
                 </div>
                 <div class="form-group">
                     <label for="prodPrice">Precio de Venta Total ($)</label>
-                    <input type="number" id="prodPrice" value="900">
+                    <input type="number" id="prodPrice" value="600">
                 </div>
                 <div class="form-group">
                     <label for="prodPago1">Primer Abono Recibido ($)</label>
-                    <input type="number" id="prodPago1" value="450">
+                    <input type="number" id="prodPago1" value="300">
                 </div>
-                <button class="btn-primary" onclick="agregarVenta()">Guardar Venta</button>
+                <button class="btn-primary" onclick="agregarVenta()">Guardar Venta en la Nube</button>
             </div>
 
             <div class="card">
                 <h2>Simulador de Proyecciones</h2>
-                <p style="font-size: 0.85rem; margin-bottom: 15px; color:#666;">Configura el modelo meta a 10 semanas (Ahorro fijo de $1,000/sem para comprar 2 productos).</p>
+                <p style="font-size: 0.85rem; margin-bottom: 15px; color:#666;">Modelo meta a 10 semanas (Ahorro fijo de $1,000/sem para comprar 2 productos).</p>
                 <div class="form-group">
                     <label for="simCost">Costo Producto Simulado ($)</label>
                     <input type="number" id="simCost" value="350">
@@ -53,11 +55,11 @@
             </div>
         </div>
 
-        <!-- Columna Derecha: Tablas y Reportes -->
+        <!-- Columna Derecha: Tablas e Informes -->
         <div class="main-content" style="display: flex; flex-direction: column; gap: 20px;">
             <div class="card">
-                <h2>Registro Histórico de Ventas Reales</h2>
-                <p style="font-size: 0.85rem; margin-bottom: 10px; color: #666;">💡 Puedes hacer doble clic en los montos de Pago 1 y Pago 2 para modificarlos directamente.</p>
+                <h2>Registro de Ventas en Tiempo Real</h2>
+                <p style="font-size: 0.85rem; margin-bottom: 10px; color: #666;">💡 Modifica los abonos directamente; se guardarán en la nube al instante.</p>
                 <div class="table-container">
                     <table id="ventasTable">
                         <thead>
@@ -75,7 +77,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Contenido dinámico -->
+                            <tr><td colspan="10" style="text-align:center;">Conectando a la nube...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -97,16 +99,12 @@
                                 <th>Caja Final</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- Contenido dinámico -->
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
 
                 <div class="chart-wrapper">
-                    <svg id="svgChart" viewBox="0 0 500 300" preserveAspectRatio="none">
-                        <!-- Las líneas se inyectan con JS -->
-                    </svg>
+                    <svg id="svgChart" viewBox="0 0 500 300" preserveAspectRatio="none"></svg>
                 </div>
                 <div class="legend">
                     <div class="legend-item"><div class="legend-color" style="background-color: #27ae60;"></div> Caja Final Real</div>
