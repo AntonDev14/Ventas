@@ -1,62 +1,53 @@
 // --- CONFIGURACIÓN DE CREDENCIALES DE SUPABASE ---
-const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co";
-const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
+const SUPABASE_URL = "https://supabase.co";
+const SUPABASE_KEY = "TU_PUBLISHABLE_KEY_AQUÍ"; // Asegúrate de mantener tu clave real aquí
 
 let supabaseClient = null;
 let ventas = [];
 
-// --- UNICA FUNCIÓN DE ARRANQUE SEGURO ---
+// --- ÚNICA FUNCIÓN DE ARRANQUE SEGURO ---
 function iniciarApp() {
     console.log("🚀 [INICIO] Intentando arrancar aplicación de ventas cloud...");
     
-    // Validamos si la librería externa ya existe en el navegador
     if (typeof supabase === 'undefined') {
-        console.error("❌ [ERROR] La librería 'supabase' no ha cargado en el HTML. Reintentando en 1 segundo...");
+        console.error("❌ [ERROR] La librería 'supabase' no ha cargado en el HTML. Reintentando...");
         setTimeout(iniciarApp, 1000);
         return;
     }
 
     try {
-        // CREAMOS EL CLIENTE AQUÍ MISMO
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log("🔒 [CONEXIÓN] Cliente de Supabase creado con éxito:", supabaseClient);
+        console.log("🔒 [CONEXIÓN] Cliente de Supabase creado con éxito.");
         
-        // Una vez creado con éxito, mandamos a llamar las ventas
+        // Primera descarga de datos inmediata al abrir la página
         obtenerVentasIniciales();
         
-        console.log("📡 [REALTIME] Conectando canal de escucha en tiempo real...");
-        supabaseClient
-            .channel('schema-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, payload => {
-                console.log(`⚡ [REALTIME DETECTADO] Cambio en DB (${payload.eventType}).`);
-                obtenerVentasIniciales();
-            })
-            .subscribe((status) => {
-                console.log(`🔌 [REALTIME STATUS] Estado del canal: ${status}`);
-            });
+        // SINCRONIZACIÓN TOTAL EN TIEMPO REAL (Consulta automática cada 3 segundos)
+        // Esto permite que veas los datos en tu celular y computadora sin refrescar
+        console.log("📡 [SINCRO CLOUD] Activando actualización automática cada 3 segundos...");
+        setInterval(obtenerVentasIniciales, 3000);
 
     } catch (error) {
         console.error("Fallo crítico al inicializar el cliente de Supabase:", error);
     }
 }
 
-// --- LEER DATOS DESDE LA NUBE ---
+// --- LEER Y VISUALIZAR DATOS DESDE LA NUBE ---
 async function obtenerVentasIniciales() {
-    if (!supabaseClient) {
-        console.error("❌ [DESCARGA ABORTADA] supabaseClient no está inicializado.");
-        return;
-    }
+    if (!supabaseClient) return;
 
-    console.log("📥 [DESCARGA] Solicitando lista de ventas a Supabase...");
     const { data, error } = await supabaseClient
         .from('ventas')
         .select('*')
         .order('id', { ascending: true });
 
     if (!error) {
-        ventas = data;
-        console.log(`✅ [DESCARGA] Éxito. Registros recuperados: ${ventas.length}`, ventas);
-        renderVentas();
+        // Solo renderizamos si el número de registros o datos cambiaron para evitar parpadeos
+        if (JSON.stringify(ventas) !== JSON.stringify(data)) {
+            console.log(`📥 [SINCRO] Datos actualizados desde la nube. Registros: ${data.length}`);
+            ventas = data;
+            renderVentas();
+        }
     } else {
         console.error("❌ [DESCARGA ERROR] Problema al descargar de Supabase:", error);
     }
@@ -69,16 +60,13 @@ async function agregarVenta() {
     const price = parseFloat(document.getElementById('prodPrice').value);
     const pago1 = parseFloat(document.getElementById('prodPago1').value);
 
-    console.log(`✍️ [NUEVA VENTA] Capturando: Producto="${name}", Costo=$${cost}, Precio=$${price}, Pago1=$${pago1}`);
-
     if (!name || isNaN(cost) || isNaN(price) || isNaN(pago1)) {
-        console.warn("⚠️ [NUEVA VENTA] Validación fallida. Campos vacíos o incorrectos.");
         alert("Por favor rellena todos los campos correctamente.");
         return;
     }
 
     if (!supabaseClient) {
-        alert("La base de datos aún no está lista. Intenta de nuevo en 2 segundos.");
+        alert("La base de datos aún no está lista.");
         return;
     }
 
@@ -94,15 +82,16 @@ async function agregarVenta() {
         status: saldo <= 0 ? 'Pagado' : 'Pendiente'
     };
 
-    console.log("📤 [SUBIDA] Enviando nueva venta a Supabase...", nuevaVenta);
+    console.log("📤 [SUBIDA] Insertando nueva venta...", nuevaVenta);
     const { error } = await supabaseClient.from('ventas').insert([nuevaVenta]);
     
     if (error) {
-        console.error("❌ [SUBIDA ERROR] Supabase rechazó la inserción:", error);
-        alert("Error al subir la venta a la nube. Revisa las políticas RLS.");
+        console.error("❌ [SUBIDA ERROR]:", error);
+        alert("Error al subir la venta.");
     } else {
-        console.log("🎉 [SUBIDA] Registro creado exitosamente en la nube.");
+        console.log("🎉 [SUBIDA] Registro creado exitosamente.");
         document.getElementById('prodName').value = '';
+        obtenerVentasIniciales(); // Forzar recarga visual inmediata
     }
 }
 // --- MODIFICAR VALORES DIRECTAMENTE EN LA BASE DE DATOS ---
@@ -110,10 +99,7 @@ async function modificarPago(id, campo, nuevoValor) {
     console.log(`✏️ [EDICIÓN] Modificando Venta ID #${id}. Pago ${campo} -> $${nuevoValor}`);
     
     const venta = ventas.find(v => v.id === id);
-    if (!venta) {
-        console.error(`❌ [EDICIÓN ERROR] No se encontró la venta local con ID #${id}`);
-        return;
-    }
+    if (!venta) return;
 
     const valorNumerico = parseFloat(nuevoValor) || 0;
     let pago1Actualizado = venta.pago1;
@@ -134,8 +120,7 @@ async function modificarPago(id, campo, nuevoValor) {
         status: status
     };
 
-    console.log(`📤 [ACTUALIZACIÓN CLOUD] Modificando ID #${id} en Supabase:`, datosActualizados);
-
+    // Actualización directa en la nube usando el ID único de la fila
     const { error } = await supabaseClient
         .from('ventas')
         .update(datosActualizados)
@@ -144,27 +129,33 @@ async function modificarPago(id, campo, nuevoValor) {
     if (error) {
         console.error(`❌ [ACTUALIZACIÓN ERROR] Falló la edición del ID #${id}:`, error);
     } else {
-        console.log(`✅ [ACTUALIZACIÓN] Celda guardada en la nube para ID #${id}.`);
+        console.log(`✅ [ACTUALIZACIÓN] Guardado en la nube para ID #${id}.`);
+        obtenerVentasIniciales(); // Sincronizar cambios
     }
 }
 
 // --- ELIMINAR VENTA CLOUD ---
 async function eliminarVenta(id) {
-    console.log(`🗑️ [SOLICITUD ELIMINACIÓN] Procesando ID #${id}`);
-    if (confirm("¿Estás seguro de que deseas eliminar este registro permanentemente?")) {
-        const { error } = await supabaseClient.from('ventas').delete().eq('id', id);
+    if (confirm("¿Estás seguro de que deseas eliminar este registro de la nube permanentemente?")) {
+        console.log(`🗑️ [BORRADO CLOUD] Eliminando ID #${id}...`);
+        
+        const { error } = await supabaseClient
+            .from('ventas')
+            .delete()
+            .eq('id', id);
+
         if (error) {
-            console.error(`❌ [BORRADO ERROR] Supabase rechazó la eliminación de ID #${id}:`, error);
+            console.error(`❌ [BORRADO ERROR] Falló eliminación de ID #${id}:`, error);
             alert("Error al eliminar el registro.");
         } else {
-            console.log(`✅ [BORRADO] ID #${id} eliminado con éxito de la nube.`);
+            console.log(`✅ [BORRADO] ID #${id} eliminado con éxito.`);
+            obtenerVentasIniciales(); // Actualizar interfaz
         }
     }
 }
 
 // --- RENDERIZAR TABLA DE VENTAS ---
 function renderVentas() {
-    console.log("🎨 [UI RENDER] Dibujando la interfaz con los nuevos datos...");
     const tbody = document.querySelector('#ventasTable tbody');
     tbody.innerHTML = '';
 
@@ -203,12 +194,10 @@ function renderVentas() {
 
 // --- PROYECCIÓN A 10 SEMANAS ---
 function generarProyeccion() {
-    console.log("📊 [PROYECCIÓN] Iniciando simulación matemática...");
     const simCosto = parseFloat(document.getElementById('simCost').value);
     const simPrecio = parseFloat(document.getElementById('simPrice').value);
 
     if (isNaN(simCosto) || isNaN(simPrecio)) {
-        console.warn("⚠️ [PROYECCIÓN] Parámetros numéricos inválidos.");
         alert("Introduce valores válidos para la simulación.");
         return;
     }
@@ -232,7 +221,6 @@ function generarProyeccion() {
         let cajaDisponible = cajaInicial + ahorroSemanal;
 
         if (cajaDisponible < inv2Prod) {
-            console.warn(`🛑 [PROYECCIÓN PAUSADA] Quiebre de caja detectado en la Semana ${i}.`);
             alert(`Falta de liquidez en la semana ${i}. La simulación se pausó.`);
             break;
         }
@@ -287,9 +275,6 @@ function dibujarGraficoSVG(cajaData, gananciaData) {
         <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#ccc" stroke-width="1" />
     `;
     svg.innerHTML = ejes + lineCaja + lineGanancia + nodos;
-    console.log("🎨 [PROYECCIÓN] Gráfico renderizado perfectamente.");
 }
 
-// UNICO DISPARADOR: SE ASEGURA DE QUE ESTA SEA LA ULTIMA LÍNEA DE TODO EL ARCHIVO JS
 iniciarApp();
-
