@@ -5,6 +5,18 @@ const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
 let supabaseClient;
 let ventas = [];
 
+// --- VALIDACIÓN DE CONEXIÓN INICIAL ---
+function inicializarAplicacion() {
+    if (typeof supabase !== 'undefined') {
+        // Solo si la librería ya cargó con éxito, creamos el cliente
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("🔒 [CONEXIÓN] Cliente de Supabase inicializado correctamente.");
+        iniciarApp();
+    } else {
+        console.error("⚠️ [REINTENTO] La librería remota no ha bajado aún. Reintentando en 1 segundo...");
+        setTimeout(inicializarAplicacion, 1000);
+    }
+}
 // --- INICIALIZACIÓN CONSTRUCTORA ---
 function inicializarCliente() {
     try {
