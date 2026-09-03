@@ -1,5 +1,5 @@
 // --- CONFIGURACIÓN DE CREDENCIALES DE SUPABASE ---
-const SUPABASE_URL = "https://supabase.co";
+const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co";
 const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB"; // Tu clave pública
 
 let supabaseClient = null;
