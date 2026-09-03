@@ -1,27 +1,50 @@
 // --- CONFIGURACIÓN DE CREDENCIALES DE SUPABASE ---
-const SUPABASE_URL = "https://rhgskluslkthtvjhfrxy.supabase.co";
-const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB"; // Tu clave pública
+const SUPABASE_URL = "https://supabase.co";
+const SUPABASE_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
 
-let supabaseClient = null;
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let ventas = [];
-let usuarioRol = "invitado"; // Rol inicial de seguridad por defecto
+let usuarioRol = "invitado"; 
 
-// --- SISTEMA DE LOGIN UI/UX ---
-function procesarLogin() {
-    const user = document.getElementById('loginUser').value.trim().toLowerCase();
-    const pass = document.getElementById('loginPass').value;
+// --- LOGIN PROFESIONAL CON CONSULTA A LA BASE DE DATOS (SUPABASE AUTH) ---
+async function procesarLogin() {
+    const emailInput = document.getElementById('loginUser').value.trim();
+    const passInput = document.getElementById('loginPass').value;
     const errorLbl = document.getElementById('loginError');
+    const loginBtn = document.querySelector('#loginModal button');
 
-    // Validación local de seguridad sin llamadas CORS extras
-    if (user === "administrador" && pass === "ka2026") {
-        usuarioRol = "admin";
-        configurarInterfazPorRol();
-    } else if (user === "invitado" && pass === "ka123") {
-        usuarioRol = "invitado";
-        configurarInterfazPorRol();
-    } else {
-        errorLbl.textContent = "Credenciales incorrectas. Intenta de nuevo.";
+    if (!emailInput || !passInput) {
+        errorLbl.textContent = "Por favor ingresa tu correo y contraseña.";
+        return;
     }
+
+    errorLbl.textContent = "Validando credenciales en la nube...";
+    loginBtn.disabled = true;
+
+    // Consulta real a los servidores de autenticación de Supabase
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: emailInput,
+        password: passInput
+    });
+
+    if (error) {
+        console.error("❌ [LOGIN FALLIDO]:", error);
+        errorLbl.textContent = "Usuario o contraseña inválidos en la base de datos.";
+        loginBtn.disabled = false;
+        return;
+    }
+
+    console.log("🔒 [LOGIN EXITOSO] Usuario autenticado por la BD:", data.user);
+
+    // Asignación profesional de roles según el correo de la base de datos
+    if (data.user.email.toLowerCase().includes("admin")) {
+        usuarioRol = "admin";
+    } else {
+        usuarioRol = "invitado";
+    }
+
+    configurarInterfazPorRol();
 }
 
 function configurarInterfazPorRol() {
@@ -29,10 +52,8 @@ function configurarInterfazPorRol() {
     document.getElementById('appContent').style.display = 'block';
     document.getElementById('lblRol').textContent = usuarioRol === "admin" ? "Administrador" : "Invitado";
 
-    // Ocultar paneles administrativos si es invitado
     if (usuarioRol === "invitado") {
-        document.getElementById('panelFormularios').classList.add('invitado-view');
-        // Ocultar sección de registro visualmente
+        document.getElementById('panelFormularios').style.display = 'none';
         const adminCard = document.querySelector('.panel-admin-only');
         if (adminCard) adminCard.style.display = 'none';
         document.getElementById('txtAyudaEdicion').textContent = "📋 Modo lectura: No tienes permisos para modificar datos.";
@@ -40,31 +61,16 @@ function configurarInterfazPorRol() {
         document.getElementById('txtAyudaEdicion').textContent = "💡 Modifica los abonos directamente en las celdas de la tabla.";
     }
     
-    // Inicializar cliente y descargar base cloud
-    iniciarApp();
+    // Iniciar descargas de datos y encender Short Polling de 3s
+    obtenerVentasIniciales(true);
+    setInterval(() => obtenerVentasIniciales(false), 3000);
 }
 
 function cerrarSesion() {
-    location.reload(); // Resetea el estado de memoria del navegador de forma segura
+    location.reload(); 
 }
 
-// --- ARRANQUE SEGURO ---
-function iniciarApp() {
-    if (typeof supabase === 'undefined') {
-        setTimeout(iniciarApp, 1000);
-        return;
-    }
-    try {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        obtenerVentasIniciales(true);
-        // Sincronización automática cloud cada 3 segundos
-        setInterval(() => obtenerVentasIniciales(false), 3000);
-    } catch (error) {
-        console.error("Error estructural en cliente:", error);
-    }
-}
-
-// --- LEER DATOS Y ACTUALIZAR CONTADORES SUPERIORES ---
+// --- LEER Y VISUALIZAR DATOS DESDE LA NUBE ---
 async function obtenerVentasIniciales(forzarRender = false) {
     if (!supabaseClient) return;
 
@@ -75,8 +81,9 @@ async function obtenerVentasIniciales(forzarRender = false) {
 
     if (!error) {
         if (forzarRender || JSON.stringify(ventas) !== JSON.stringify(data)) {
+            console.log(`📥 [SINCRO] Datos descargados. Registros: ${data.length}`);
             ventas = data;
-            calcularMetricasCaja(); // Procesar contadores superiores
+            calcularMetricasCaja();
             renderVentas();
         }
     }
@@ -91,8 +98,6 @@ function calcularMetricasCaja() {
         cajaEfectivo += parseFloat(v.total_recibido) || 0;
         dineroFlujo += parseFloat(v.saldo) || 0;
         
-        // La ganancia real acumulada es lo recibido menos el costo proporcional invertido
-        // Si el precio de venta es cero evitamos división entre cero
         if (v.price > 0) {
             const factorRetorno = v.total_recibido / v.price;
             const costoProporcionalCobrado = v.cost * factorRetorno;
@@ -100,17 +105,13 @@ function calcularMetricasCaja() {
         }
     });
 
-    // Inyectar en las tarjetas superiores de la pantalla
     document.getElementById('txtCajaEfectivo').textContent = `$${cajaEfectivo.toFixed(2)}`;
     document.getElementById('txtDineroFlujo').textContent = `$${dineroFlujo.toFixed(2)}`;
     document.getElementById('txtGananciaReal').textContent = `$${gananciaReal.toFixed(2)}`;
 }
 // --- GUARDAR NUEVA VENTA EN LA NUBE ---
 async function agregarVenta() {
-    if (usuarioRol !== "admin") {
-        alert("Acción no permitida para tu nivel de acceso.");
-        return;
-    }
+    if (usuarioRol !== "admin") return;
 
     const name = document.getElementById('prodName').value;
     const cost = parseFloat(document.getElementById('prodCost').value);
@@ -141,17 +142,16 @@ async function agregarVenta() {
     }
 }
 
-// --- MODIFICAR ABONOS CON MENSAJE DE CONFIRMACIÓN ---
+// --- MODIFICAR VALORES CON CONFIRMACIÓN ---
 async function modificarPago(id, campo, nuevoValor) {
     if (usuarioRol !== "admin") {
-        alert("Acceso Denegado. Solo un administrador puede modificar montos.");
-        obtenerVentasIniciales(true); // Forzar re-render para revertir el input escrito
+        alert("Acceso Denegado. Solo el administrador puede hacer cambios.");
+        obtenerVentasIniciales(true);
         return;
     }
 
-    // Mensaje de confirmación solicitado para evitar errores humanos
-    if (!confirm(`⚠️ MENSAJE DE CONTROL:\n¿Estás seguro de que deseas actualizar el valor del Pago ${campo} a $${nuevoValor}?`)) {
-        obtenerVentasIniciales(true); // Revertir input visual si cancela
+    if (!confirm(`⚠️ CONTROL DE SEGURIDAD K&A:\n¿Estás seguro de que deseas cambiar el Pago ${campo} a $${nuevoValor}?`)) {
+        obtenerVentasIniciales(true);
         return;
     }
 
@@ -185,14 +185,11 @@ async function modificarPago(id, campo, nuevoValor) {
     if (!error) obtenerVentasIniciales(true);
 }
 
-// --- ELIMINAR CON CONFIRMACIÓN ---
+// --- ELIMINAR REGISTRO ---
 async function eliminarVenta(id) {
-    if (usuarioRol !== "admin") {
-        alert("Acceso Denegado. No tienes permisos para borrar registros.");
-        return;
-    }
+    if (usuarioRol !== "admin") return;
 
-    if (confirm("⚠️ ADVERTENCIA CRÍTICA:\n¿Estás seguro de que deseas eliminar este registro permanentemente de la nube de K&A Lifestyle?")) {
+    if (confirm("⚠️ ADVERTENCIA CRÍTICA K&A:\n¿Deseas eliminar este registro de forma permanente en la nube?")) {
         const { error } = await supabaseClient.from('ventas').delete().eq('id', id);
         if (!error) obtenerVentasIniciales(true);
     }
@@ -203,7 +200,6 @@ function renderVentas() {
     const tbody = document.querySelector('#ventasTable tbody');
     tbody.innerHTML = '';
 
-    // Ocultar o mostrar columna acciones según rol
     const actionHeader = document.querySelector('.admin-action-header');
     if (actionHeader) actionHeader.style.display = usuarioRol === 'admin' ? '' : 'none';
 
@@ -213,14 +209,12 @@ function renderVentas() {
     }
 
     ventas.forEach(v => {
-        // Calcular la ganancia real del producto basada en lo efectivamente cobrado
         let gananciaProducto = 0;
         if (v.price > 0) {
             const factor = v.total_recibido / v.price;
             gananciaProducto = v.total_recibido - (v.cost * factor);
         }
 
-        // Si es invitado, deshabilitamos las cajas de texto de abonos (disabled)
         const isEditable = usuarioRol === 'admin' ? '' : 'disabled';
 
         const tr = document.createElement('tr');
@@ -243,13 +237,13 @@ function renderVentas() {
             <td style="color:${v.saldo > 0 ? 'var(--oro-viejo)' : 'inherit'}">$${parseFloat(v.saldo).toFixed(2)}</td>
             <td style="font-weight:600; color:#27ae60;">$${gananciaProducto.toFixed(2)}</td>
             <td><span class="status ${v.status.toLowerCase()}">${v.status}</span></td>
-            ${usuarioRol === 'admin' ? `<td><button class="btn-secondary action-btn" style="background-color:var(--danger); padding:4px 8px;" onclick="eliminarVenta(${v.id})">🗑️</button></td>` : ''}
+            ${usuarioRol === 'admin' ? `<td><button class="btn-secondary action-btn" style="background-color:#c0392b; padding:4px 8px;" onclick="eliminarVenta(${v.id})">🗑️</button></td>` : ''}
         `;
         tbody.appendChild(tr);
     });
 }
 
-// --- PROYECCIONES A 10 SEMANAS ---
+// --- PROYECCIÓN A 10 SEMANAS ---
 function generarProyeccion() {
     const simCosto = parseFloat(document.getElementById('simCost').value);
     const simPrecio = parseFloat(document.getElementById('simPrice').value);
@@ -263,14 +257,10 @@ function generarProyeccion() {
     tbody.innerHTML = '';
     document.getElementById('proyeccionesCard').style.display = 'block';
 
-    let cajaFinal = 0;
-    let gananciaAcumulada = 0;
-    const ahorroSemanal = 1000;
-    const inv2Prod = simCosto * 2;
-    const abono1 = (simPrecio * 2) / 2;
+    let cajaFinal = 0; let gananciaAcumulada = 0;
+    const ahorroSemanal = 1000; const inv2Prod = simCosto * 2; const abono1 = (simPrecio * 2) / 2;
 
-    let datosGraficoCaja = [];
-    let datosGraficoGanancia = [];
+    let datosGraficoCaja = []; let datosGraficoGanancia = [];
 
     for (let i = 1; i <= 10; i++) {
         let cajaInicial = cajaFinal;
@@ -283,9 +273,7 @@ function generarProyeccion() {
         }
 
         cajaFinal = cajaDisponible - inv2Prod + abono1 + abono2;
-        if (i > 1) {
-            gananciaAcumulada += ((simPrecio * 2) - inv2Prod);
-        }
+        if (i > 1) gananciaAcumulada += ((simPrecio * 2) - inv2Prod);
 
         datosGraficoCaja.push(cajaFinal);
         datosGraficoGanancia.push(gananciaAcumulada);
@@ -299,7 +287,7 @@ function generarProyeccion() {
             <td>$${abono1.toFixed(2)}</td>
             <td>$${abono2.toFixed(2)}</td>
             <td style="font-weight:bold; color:var(--verde-olivo)">$${gananciaAcumulada.toFixed(2)}</td>
-            <td style="font-weight:bold; background-color:var(--primary-light)">$${cajaFinal.toFixed(2)}</td>
+            <td style="font-weight:bold; background-color:#eaf2ee">$${cajaFinal.toFixed(2)}</td>
         `;
         tbody.appendChild(tr);
     }
