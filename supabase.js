@@ -1,21 +1,20 @@
 (function (global, factory) {
     global.supabase = factory();
 })(this, (function () { 'use strict';
+    // CREDENCIALES FIJADAS EN EL MOTOR DE RED INTERNO PARA EVITAR ERRORES CORS
+    const FIXED_URL = "https://rhgskluslkthtvjhfrxy.supabase.co";
+    const FIXED_KEY = "sb_publishable_W2ZrcHc2HCWbO0vAWZ3AeQ_gfstDZGB";
+
     class SupabaseClient {
-        constructor(supabaseUrl, supabaseKey) {
-            // Limpiar la URL para asegurar que no tenga rutas duplicadas ni diagonales extras
-            let baseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "");
-            baseUrl = baseUrl.replace(/\/auth\/v1\/?$/, "");
-            baseUrl = baseUrl.replace(/\/$/, "");
+        constructor() {
+            this.supabaseUrl = FIXED_URL;
+            this.supabaseKey = FIXED_KEY;
             
-            this.supabaseUrl = baseUrl;
-            this.supabaseKey = supabaseKey;
-            
-            // Módulo de Autenticación Profesional Corregido
+            // Módulo de Autenticación con URL Blindada Privada
             this.auth = {
                 signInWithPassword: async ({ email, password }) => {
                     const url = `${this.supabaseUrl}/auth/v1/token?grant_type=password`;
-                    console.log(`🔒 [SUPABASE AUTH] Conectando a la cuenta en la nube -> ${url}`);
+                    console.log(`🔒 [SUPABASE AUTH CLOUD] Solicitando token a tu proyecto K&A -> ${url}`);
                     try {
                         const res = await fetch(url, {
                             method: 'POST',
@@ -52,7 +51,7 @@
         }
         _request(method, table, payload) {
             const url = `${this.supabaseUrl}/rest/v1/${table}`;
-            console.log(`🌐 [SUPABASE HTTP] ${method} -> ${url}`);
+            console.log(`🌐 [SUPABASE HTTP CLOUD] ${method} -> ${url}`);
             
             const options = {
                 method: method,
@@ -80,5 +79,5 @@
             });
         }
     }
-    return { createClient: (url, key) => new SupabaseClient(url, key) };
+    return { createClient: () => new SupabaseClient() };
 }));
