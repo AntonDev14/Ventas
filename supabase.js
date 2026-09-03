@@ -3,14 +3,19 @@
 })(this, (function () { 'use strict';
     class SupabaseClient {
         constructor(supabaseUrl, supabaseKey) {
-            this.supabaseUrl = supabaseUrl.replace(/\/$/, "");
+            // Limpiar la URL para asegurar que no tenga rutas duplicadas ni diagonales extras
+            let baseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "");
+            baseUrl = baseUrl.replace(/\/auth\/v1\/?$/, "");
+            baseUrl = baseUrl.replace(/\/$/, "");
+            
+            this.supabaseUrl = baseUrl;
             this.supabaseKey = supabaseKey;
             
-            // Módulo de Autenticación Profesional integrado
+            // Módulo de Autenticación Profesional Corregido
             this.auth = {
                 signInWithPassword: async ({ email, password }) => {
                     const url = `${this.supabaseUrl}/auth/v1/token?grant_type=password`;
-                    console.log("🔒 [SUPABASE AUTH] Intentando inicio de sesión en la nube...");
+                    console.log(`🔒 [SUPABASE AUTH] Conectando a la cuenta en la nube -> ${url}`);
                     try {
                         const res = await fetch(url, {
                             method: 'POST',
@@ -23,7 +28,6 @@
                         const data = await res.json();
                         if (!res.ok) return { data: null, error: data };
                         
-                        // Guardar sesión en memoria del cliente
                         return { data: { user: data.user, session: data }, error: null };
                     } catch (err) {
                         return { data: null, error: err };
