@@ -38,7 +38,7 @@ async function procesarLogin() {
     console.log("🔒 [LOGIN EXITOSO] Usuario autenticado por la BD:", data.user);
 
     // Asignación profesional de roles según el correo de la base de datos
-    if (data.user.email.toLowerCase().includes("admin")) {
+    if (data.user.email.toLowerCase().includes("ad")) {
         usuarioRol = "admin";
     } else {
         usuarioRol = "invitado";
