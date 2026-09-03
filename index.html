@@ -3,64 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Ventas Cloud</title>
+    <title>K&A Lifestyle - Control Financiero</title>
     <link rel="stylesheet" href="styles.css">
-    
-    <!-- LEER LA LIBRERÍA DE FORMA LOCAL (EVITA BLOQUEOS DE RED) -->
-   <!-- Cambia la línea de supabase por esta versión con truco de caché -->
-    <script src="supabase.js?v=3"></script>
+    <!-- Inicializador de la librería local nativa -->
+    <script src="supabase.js?v=4"></script>
 </head>
 <body>
 
-<div class="container">
+<!-- MODAL DE LOGIN (UI Bloqueada hasta autenticar) -->
+<div id="loginModal" class="modal-overlay">
+    <div class="login-card">
+        <h2>K&A Lifestyle</h2>
+        <p>Control de Ventas y Proyecciones</p>
+        <div class="form-group">
+            <label for="loginUser">Usuario</label>
+            <input type="text" id="loginUser" placeholder="Ej. administrador o invitado">
+        </div>
+        <div class="form-group">
+            <label for="loginPass">Contraseña</label>
+            <input type="password" id="loginPass" placeholder="••••••••">
+        </div>
+        <button class="btn-primary" onclick="procesarLogin()">Ingresar al Sistema</button>
+        <div id="loginError" class="login-error-msg"></div>
+    </div>
+</div>
+
+<!-- CONTENEDOR PRINCIPAL DE LA APLICACIÓN -->
+<div class="container" id="appContent" style="display: none;">
     <header>
-        <h1>Control de Ventas en la Nube </h1>
+        <div class="header-top">
+            <h1>K&A Lifestyle</h1>
+            <div class="user-status-bar">
+                <span>Rol: <strong id="lblRol">Invitado</strong></span>
+                <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
+            </div>
+        </div>
+        <p class="subtitle">Modelo de inversión cíclica semanal con cobro desfasado en dos pagos</p>
     </header>
 
+    <!-- TARJETAS DE CONTADORES SUPERIORES (KPIs de Caja) -->
+    <div class="kpi-grid">
+        <div class="kpi-card total-recaudado">
+            <h3>Efectivo en Caja</h3>
+            <p id="txtCajaEfectivo">$0.00</p>
+            <span>Abonos + Ventas Liquidadas</span>
+        </div>
+        <div class="kpi-card total-flujo">
+            <h3>Dinero en Flujo</h3>
+            <p id="txtDineroFlujo">$0.00</p>
+            <span>Saldos pendientes por cobrar</span>
+        </div>
+        <div class="kpi-card total-ganancias">
+            <h3>Ganancia Bruta Real</h3>
+            <p id="txtGananciaReal">$0.00</p>
+            <span>Margen consolidado actual</span>
+        </div>
+    </div>
+
     <div class="grid">
-        <!-- Columna Izquierda: Formularios -->
-        <div class="sidebar-grid" style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="card">
+        <!-- Columna Izquierda: Formularios (Habilitado solo para Admin) -->
+        <div class="sidebar-grid" id="panelFormularios">
+            <div class="card panel-admin-only">
                 <h2>Registrar Nueva Venta</h2>
                 <div class="form-group">
                     <label for="prodName">Nombre del Producto</label>
-                    <input type="text" id="prodName" placeholder="Ej. Armaf...">
+                    <input type="text" id="prodName" placeholder="Ej. Lote Relojes Premium">
                 </div>
                 <div class="form-group">
                     <label for="prodCost">Costo de Inversión ($)</label>
-                    <input type="number" id="prodCost" value="450">
+                    <input type="number" id="prodCost" value="350">
                 </div>
                 <div class="form-group">
                     <label for="prodPrice">Precio de Venta Total ($)</label>
-                    <input type="number" id="prodPrice" value="900">
+                    <input type="number" id="prodPrice" value="600">
                 </div>
                 <div class="form-group">
                     <label for="prodPago1">Primer Abono Recibido ($)</label>
-                    <input type="number" id="prodPago1" value="450">
+                    <input type="number" id="prodPago1" value="300">
                 </div>
                 <button class="btn-primary" onclick="agregarVenta()">Guardar Venta en la Nube</button>
             </div>
 
             <div class="card">
                 <h2>Simulador de Proyecciones</h2>
-                <p style="font-size: 0.85rem; margin-bottom: 15px; color:#666;">Modelo meta a 10 semanas (Ahorro fijo de $1,000/sem para comprar 2 productos).</p>
+                <p style="font-size: 0.85rem; margin-bottom: 15px; color:#a38a5d;">Modelo meta a 10 semanas (Ahorro fijo de $1,000/sem para comprar 2 productos).</p>
                 <div class="form-group">
                     <label for="simCost">Costo Producto Simulado ($)</label>
-                    <input type="number" id="simCost" value="450">
+                    <input type="number" id="simCost" value="350">
                 </div>
-                <div class="form-group =">
+                <div class="form-group">
                     <label for="simPrice">Precio Venta Simulado ($)</label>
-                    <input type="number" id="simPrice" value="900">
+                    <input type="number" id="simPrice" value="600">
                 </div>
                 <button class="btn-secondary" onclick="generarProyeccion()">Simular 10 Semanas</button>
             </div>
         </div>
 
         <!-- Columna Derecha: Tablas e Informes -->
-        <div class="main-content" style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="main-content">
             <div class="card">
                 <h2>Registro de Ventas en Tiempo Real</h2>
-                <p style="font-size: 0.85rem; margin-bottom: 10px; color: #666;">💡 Modifica los abonos directamente; se guardarán en la nube al instante.</p>
+                <p style="font-size: 0.85rem; margin-bottom: 10px; color: #a38a5d;" id="txtAyudaEdicion">💡 Modifica los abonos directamente en las celdas (Requiere rol Administrador).</p>
                 <div class="table-container">
                     <table id="ventasTable">
                         <thead>
@@ -71,14 +114,15 @@
                                 <th>Precio</th>
                                 <th>Pago 1</th>
                                 <th>Pago 2</th>
-                                <th>Total Recibido</th>
+                                <th>Recibido</th>
                                 <th>Saldo</th>
+                                <th>Ganancia</th>
                                 <th>Estado</th>
-                                <th>Acciones</th>
+                                <th class="admin-action-header">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="10" style="text-align:center;">Conectando a la nube...</td></tr>
+                            <tr><td colspan="11" style="text-align:center;">Conectando a la nube...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -108,8 +152,8 @@
                     <svg id="svgChart" viewBox="0 0 500 300" preserveAspectRatio="none"></svg>
                 </div>
                 <div class="legend">
-                    <div class="legend-item"><div class="legend-color" style="background-color: #27ae60;"></div> Caja Final Real</div>
-                    <div class="legend-item"><div class="legend-color" style="background-color: #e67e22;"></div> Ganancia Acumulada</div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #a38a5d;"></div> Caja Final Real</div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: #2f3e32;"></div> Ganancia Acumulada</div>
                 </div>
             </div>
         </div>
